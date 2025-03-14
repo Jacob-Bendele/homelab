@@ -1,0 +1,22 @@
+---
+- name: Check if venv ensurepip is availble
+  ansible.builtin.apt:
+    name: python3.12-venv
+    state: present
+  become: yes
+  when: ansible_distribution in ['Debian', 'Ubuntu']
+
+- name: Set up virtual environment
+  ansible.builtin.command:
+    cmd: python3 -m venv {{ venv_path }}
+  args:
+    creates: "{{ venv_path }}"
+
+- name: Install Python library in virtual environment
+  ansible.builtin.pip:
+    name: "{{ item }}"
+    virtualenv: "{{ venv_path }}"
+    virtualenv_command: python3 -m venv
+    state: present
+  loop: "{{ python_libraries }}"
+

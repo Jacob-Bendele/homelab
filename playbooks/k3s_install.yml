@@ -1,0 +1,25 @@
+---
+- name: Install k3s on targeted nodes
+  hosts: k3s_nodes
+  tasks:
+    - name: Configure k3s master nodes
+      include_role:
+        name: k3s
+      vars:
+        k3s_node_type: master
+      when: inventory_hostname in groups['k3s_masters']
+
+    - name: Set k3s facts from master
+      ansible.builtin.set_fact:
+        master_url: "{{ hostvars[groups['k3s_masters'][0]]['k3s_server_url'] }}"
+        token: "{{ hostvars[groups['k3s_masters'][0]]['k3s_token'] }}"
+      when: inventory_hostname in groups['k3s_workers']
+
+    - name: Configure k3s worker nodes
+      include_role:
+        name: k3s
+      vars:
+        k3s_node_type: worker
+        k3s_server_url: "{{master_url}}"
+        k3s_token: "{{token}}"
+      when: inventory_hostname in groups['k3s_workers']

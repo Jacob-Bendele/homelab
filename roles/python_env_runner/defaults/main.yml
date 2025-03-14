@@ -1,0 +1,4 @@
+---
+venv_path: "/tmp/ansible_temp_venv"
+python_libraries: "your_required_library"
+command: ""

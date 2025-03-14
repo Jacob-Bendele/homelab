@@ -1,0 +1,21 @@
+---
+- name: Check if Helm is installed
+  ansible.builtin.command:
+    cmd: helm version
+  register: installed
+  ignore_errors: true
+
+- name: Install Helm
+  block:
+    - name: Download helm install script
+      ansible.builtin.get_url:
+        url: "{{ helm_url }}"
+        dest: "{{ ansible_env.TMPDIR | default('/tmp') }}/helm_installer.sh"
+        mode: 700
+      register: helm_download
+
+    - name: Run Helm install script
+      ansible.builtin.command:
+        cmd: "{{ helm_download.dest }}"
+  when: installed.rc != 0
+  become: true

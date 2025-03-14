@@ -1,0 +1,7 @@
+---
+- name: Configure local network DNS
+  hosts: dns
+  tasks:
+    - name: Init Unbound & AdGuardHome
+      include_role:
+        name: dns

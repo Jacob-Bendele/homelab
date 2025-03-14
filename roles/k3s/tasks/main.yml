@@ -1,0 +1,48 @@
+---
+- name: Check k3s install
+  ansible.builtin.command:
+    cmd: kubectl version
+  become: true
+  register: installed
+  ignore_errors: true
+
+- name: Download k3s install script
+  ansible.builtin.get_url:
+    url: "{{ k3s_url }}"
+    dest: "{{ ansible_env.TMPDIR | default('/tmp') }}/k3s_installer.sh"
+    mode: '0755'
+  register: k3s_installer
+  when: installed.rc != 0
+
+- name: Install K3s
+  block:
+    - name: Run K3s installer for master node
+      ansible.builtin.shell:
+        cmd: "{{ k3s_installer.dest }}"
+      when: k3s_node_type == "master"
+
+    - name: Run K3s installer for worker node
+      ansible.builtin.shell:
+        cmd: "K3S_URL={{ k3s_server_url }} K3S_TOKEN={{ k3s_token }} {{ k3s_installer.dest }}"
+      when: k3s_node_type == "worker"
+
+  become: true
+  when: installed.rc != 0
+
+- name: Set facts for master node
+  block:
+    - name: Get K3s server URL
+      ansible.builtin.set_fact:
+        k3s_server_url: "https://{{ ansible_default_ipv4.address }}:6443"
+
+    - name: Get K3s token
+      ansible.builtin.command:
+        cmd: cat /var/lib/rancher/k3s/server/node-token
+      register: k3s_token_result
+
+    - name: Set K3s token fact
+      ansible.builtin.set_fact:
+        k3s_token: "{{ k3s_token_result.stdout }}"
+
+  become: true  
+  when: k3s_node_type == "master"

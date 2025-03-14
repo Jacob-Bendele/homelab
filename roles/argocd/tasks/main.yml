@@ -1,0 +1,47 @@
+---
+- name: argoCD installed
+  ansible.builtin.command:
+    cmd: kubectl get pods -n argocd
+  register: installed
+  become: true
+
+- name: Install argoCD
+  block:
+    - name: Add argo chart repo
+      kubernetes.core.helm_repository:
+        name: argo
+        repo_url: "{{ repo_url }}"
+
+    - name: Deploy argoCD
+      kubernetes.core.helm:
+        name: argocd
+        chart_ref: argo/argo-cd
+        release_namespace: argocd
+        chart_version: "{{ version }}"
+        values: "{{ lookup('ansible.builtin.file', 'argo-values.yaml') | from_yaml }}"
+        kubeconfig: "{{ kubeconfig }}"
+        create_namespace: true
+  become: true
+  when: '"No resources found in default namespace." in installed.stdout'
+
+- name: Install traefik ingress route
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('ansible.builtin.file', 'argo-ingress.yaml') | from_yaml }}"
+    kubeconfig: "{{ kubeconfig }}"
+  become: true
+
+- name: Configure argo repo
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('ansible.builtin.template', 'app-of-apps-secret.j2') | from_yaml }}"
+    kubeconfig: "{{ kubeconfig }}"
+  become: true
+
+- name: Launch ArgoCD app of apps
+  kubernetes.core.k8s:
+    name: app-of-apps
+    state: present
+    definition: "{{ lookup('ansible.builtin.file', 'app-of-apps.yaml') | from_yaml }}"
+    kubeconfig: "{{ kubeconfig }}"
+  become: true

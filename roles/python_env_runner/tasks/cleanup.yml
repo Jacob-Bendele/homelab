@@ -1,0 +1,5 @@
+---
+- name: Remove virtual environment
+  ansible.builtin.file:
+    path: "{{ venv_path }}"
+    state: absent

@@ -1,0 +1,29 @@
+---
+- name: Install argocd on targeted nodes
+  hosts: k3s_masters
+  vars:
+    env_path: "/tmp/argocd"
+  tasks:
+    - name: Install Helm
+      include_role:
+        name: helm
+
+    - name: Install python dependencies
+      include_role:
+        name: python_env_runner
+      vars:
+        venv_path: "{{ env_path }}"
+        python_libraries: 
+          - PyYAML
+          - jsonpatch
+          - kubernetes
+
+    - name: Set ansible Python interpreter
+      ansible.builtin.set_fact:
+        ansible_python_interpreter: "{{ env_path }}/bin/python"
+
+    - name: Run argoCD setup
+      include_role:
+        name: argocd
+      vars:
+        kubeconfig: "/etc/rancher/k3s/k3s.yaml"

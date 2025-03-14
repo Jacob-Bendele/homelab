@@ -1,0 +1,12 @@
+---
+- name: Run CLI-invokable Python module in activated environment
+  ansible.builtin.shell: |
+    source "{{ venv_path}}"/bin/activate
+    {{ command }}
+  args:
+    executable: /bin/bash
+  when: command is not defined or command | length == 0
+
+- name: Display command output
+  ansible.builtin.debug:
+    var: command_output.stdout_lines

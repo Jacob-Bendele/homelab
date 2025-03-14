@@ -1,0 +1,96 @@
+---
+
+# TODO: fix the checking logic here
+- name: Setup and install unbound
+  block:
+    - name: Check if unbound service running
+      ansible.builtin.service:
+        name: unbound
+        state: started
+      check_mode: yes
+      ignore_errors: true
+      register: unbound_service_status
+
+- name: Display service status
+  ansible.builtin.debug:
+    msg: >-
+      Service is 
+      {%- if unbound_service_status.failed is defined and unbound_service_status.failed %}
+      not installed or not found
+      {%- elif unbound_service_status.changed is defined and not unbound_service_status.changed %}
+      running
+      {%- else %}
+      not running
+      {%- endif %}
+
+- name: Install unbound
+  ansible.builtin.apt:
+    name: unbound
+    update_cache: true
+  when: unbound_service_status is failed and ansible_distribution in ['Ubuntu', 'Debian']
+  become: true
+
+- name: Copy unbound config file to remote
+  ansible.builtin.copy:
+    src: unbound.conf
+    dest: /etc/unbound/unbound.conf.d/unbound.conf
+    mode: '0644'
+  when: unbound_service_status.changed is not defined or unbound_service_status.changed
+  become: true
+  
+- name: Restart unbound
+  ansible.builtin.service:
+    name: unbound
+    state: restarted
+  when: unbound_service_status.changed is not defined or unbound_service_status.changed
+  become: true
+
+- name: Install and configure AdGuardHome
+  block:
+    - name: Check if AdGuardHome is installed and running
+      ansible.builtin.service:
+        name: AdGuardHome
+        state: started
+      check_mode: yes
+      ignore_errors: true
+      register: adguard_service_status
+
+    - name: Create temp work dir
+      ansible.builtin.tempfile:
+        state: directory
+        prefix: adguard_install
+      register: temp_dir
+    
+    - name: Download AdGuardHome install script
+      ansible.builtin.get_url:
+        url: "{{ adguardhome_url }}"
+        dest: "{{ temp_dir.path }}/install.sh"
+        mode: '0755'
+      register: installer
+      when: adguard_service_status.status is defined and adguard_service_status.status != 'started'
+
+    - name: Run AdGuardHome installer
+      ansible.builtin.command:
+        cmd: "{{ installer.dest }}"
+      when: adguard_service_status.status is defined and adguard_service_status.status != 'started'
+
+    - name: Copy AdGuardHome config file to remote
+      ansible.builtin.copy:
+        src: unbound.conf
+        dest: /opt/AdGuardHome/AdGuardHome.yaml
+        mode: '0644'
+      when: adguard_service_status.changed is not defined or adguard_service_status.changed
+      become: true
+      
+    - name: Restart AdGuardHom
+      ansible.builtin.service:
+        name: AdGuardHome
+        state: restarted
+      when: adguard_service_status.changed is not defined or adguard_service_status.changed
+      become: true
+
+    - name: Remove temporary directory at end
+      ansible.builtin.file:
+        path: "{{ temp_dir.path }}"
+        state: absent
+      when: temp_dir.path is defined
