@@ -1,21 +1,10 @@
 terraform {
   required_providers {
-    unifi = {
-      source  = "paultyng/unifi"
-      version = "0.41.0"
-    }
     adguard = {
       source = "gmichels/adguard"
       version = "1.5.0"
     }
   }
-}
-
-provider "unifi" {
-  allow_insecure = true
-  api_url  = var.network_config.unifi_host
-  username = var.unifi_api_user.username
-  password = var.unifi_api_user.password
 }
 
 provider "adguard" {

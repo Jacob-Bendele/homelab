@@ -3,6 +3,8 @@ resource "adguard_config" "home_config" {
         upstream_dns = var.config.upstream_dns
         fallback_dns = var.config.fallback_dns
     }
+
+    tls = var.config.tls
 }
 
 resource "adguard_rewrite" "dns_redirects" {
