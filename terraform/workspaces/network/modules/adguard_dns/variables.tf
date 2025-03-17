@@ -6,5 +6,11 @@ variable "config" {
             domain = string
             address = string
         }))
+        tls = object({
+            enabled = bool
+            server_name = string
+            certificate_chain = string
+            private_key = string
+        })
     })
 }
