@@ -11,6 +11,7 @@ variable "config" {
             server_name = string
             certificate_chain = string
             private_key = string
+            force_https = bool
         })
     })
 }

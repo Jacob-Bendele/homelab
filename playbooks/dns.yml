@@ -5,3 +5,12 @@
     - name: Init Unbound & AdGuardHome
       include_role:
         name: dns
+
+    - name: acme.sh
+      include_role:
+        name: acme
+      vars:
+        dns_config: "{{ lookup('ansible.builtin.env', 'DNS_CONFIG') }}"
+        acme_options: "{{ lookup('ansible.builtin.env', 'AGH_ACME_OPTIONS') }}"
+        cert_locations: "{{ lookup('ansible.builtin.env', 'AGH_CERT_LOCATIONS') }}"
+        reload_cmd: "{{ lookup('ansible.builtin.env', 'AGH_RELOAD_COMMAND') }}"

@@ -1,0 +1,70 @@
+---
+- name: Install and configure acme.sh
+  block:
+    - name: Check acme.sh installed
+      ansible.builtin.command:
+        cmd: "{{ acme_sh_install_path }}/acme.sh --version"
+      ignore_errors: true
+      register: acme_installed
+      changed_when: false
+
+    - name: Create temp work dir
+      ansible.builtin.tempfile:
+        state: directory
+        prefix: acme_install
+      register: temp_dir
+    
+    - name: Download acme installer
+      ansible.builtin.get_url:
+        url: "{{ acme_installer_url }}"
+        dest: "{{ temp_dir.path }}/acme_installer.sh"
+        mode: '0755'
+      register: acme_download
+      when: acme_installed.rc != 0
+
+    - name: Install acme.sh
+      ansible.builtin.command:
+        cmd: "{{ acme_download.dest }}"
+      when: acme_installed.rc != 0
+
+    - name: Push config
+      ansible.builtin.template:
+        src: account.conf.j2
+        dest: "{{ acme_sh_install_path }}/account.conf"
+        mode: '0640'
+      vars:
+        dns_provider: "{{ dns_config.dns }}"
+        api_key: "{{ dns_config.secret }}"
+        account_email: "{{ dns_config.username }}"
+
+    - name: Issue certificate
+      ansible.builtin.command:
+        cmd: "{{ acme_sh_install_path }}/acme.sh --issue -d {{ acme_options.domain }} --server {{ acme_options.server }} --dns {{ acme_options.dns }}"
+      register: issue_output
+      failed_when:
+        - issue_output.rc != 0
+        - '"Domains not changed" not in issue_output.stdout'
+
+    - name: Ensure certificate paths exist
+      ansible.builtin.file:
+        path: "{{ item.value.location }}"
+        state: directory
+        mode: '0755'
+        recurse: true
+      loop: "{{ cert_locations | dict2items }}"
+
+    - name: Install certificate
+      shell: |
+          "{{ acme_sh_install_path }}"/acme.sh --install-cert -d {{ acme_options.domain }} --server {{ acme_options.server }} \
+          --cert-file "{{ cert_locations.cert_file.location }}"/"{{ cert_locations.cert_file.file_name }}" \
+          --key-file "{{ cert_locations.key_file.location }}"/"{{ cert_locations.key_file.file_name }}" \
+          --fullchain-file "{{ cert_locations.fullchain_file.location }}"/"{{ cert_locations.fullchain_file.file_name }}" \
+          --reloadcmd "{{ reload_cmd }}"
+      when: acme_options.hook == ""
+
+
+    - name: Install certificate using deployment hook
+      ansible.builtin.command:
+        cmd: "{{ acme_sh_install_path }}/acme.sh --deploy -d {{ acme_options.domain }} --deploy-hook {{ acme_options.hook }}"
+      when: acme_options.hook != ""
+  become: true

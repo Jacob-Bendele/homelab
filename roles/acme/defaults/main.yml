@@ -1,0 +1,6 @@
+---
+dns_config: {username: "you@example.com", secret: "secret", dns: ""}
+acme_options: {server: "", domain: "", location: "", dns: "", hook: ""} # reference acme.sh docs for options
+cert_locations: {key_file: {location: "", file_name: ""}, cert_file: {location: "", file_name: ""}, fullchain_file: {location: "", file_name: ""}}
+reload_cmd: "podman restart unifi-os || systemctl restart unifi-os"
+acme_sh_install_path: "/root/.acme.sh"
