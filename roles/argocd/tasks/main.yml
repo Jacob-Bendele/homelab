@@ -38,6 +38,14 @@
     kubeconfig: "{{ kubeconfig }}"
   become: true
 
+- name: Configure vault plugin secret
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('ansible.builtin.template', 'avp-secret.j2') | from_yaml }}"
+    kubeconfig: "{{ kubeconfig }}"
+  become: true
+
+
 - name: Launch ArgoCD app of apps
   kubernetes.core.k8s:
     name: app-of-apps
