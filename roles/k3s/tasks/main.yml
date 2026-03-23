@@ -1,4 +1,44 @@
 ---
+- name: Gather service facts
+  ansible.builtin.service_facts:
+
+- name: Stop and mask multipathd on k3s nodes
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: stopped
+    enabled: false
+    masked: true
+  loop:
+    - multipathd.service
+    - multipathd.socket
+  become: true
+  when: item in ansible_facts.services
+
+- name: Check for multipath command
+  ansible.builtin.command:
+    cmd: which multipath
+  become: true
+  register: multipath_command
+  changed_when: false
+  failed_when: false
+
+- name: Check for active multipath maps
+  ansible.builtin.command:
+    cmd: multipath -ll
+  become: true
+  register: multipath_maps
+  changed_when: false
+  failed_when: false
+  when: multipath_command.rc == 0
+
+- name: Flush any existing multipath maps
+  ansible.builtin.command:
+    cmd: multipath -F
+  become: true
+  when:
+    - multipath_command.rc == 0
+    - multipath_maps.stdout | trim != ""
+
 - name: Check k3s install
   ansible.builtin.command:
     cmd: kubectl version
