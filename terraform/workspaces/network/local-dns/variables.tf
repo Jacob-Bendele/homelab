@@ -2,11 +2,14 @@
 # no need to keep overhead of syncing the two vars.
 variable "dns_config" {}
 
+# Shared network inventory used to locate the AdGuard Home host.
+variable "network_config" {}
+
 variable "adguard_api_user" {
-    type = object({
-        username  = string
-        password  = string
-    })
-    sensitive = true
-    default = null
+  type = object({
+    username = string
+    password = string
+  })
+  sensitive = true
+  default   = null
 }
